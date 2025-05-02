@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UNEVE - Newton-Cotes 1/7 Simplificado</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root { --coral:#FF6F61; --teal:#6AAFC0; --gold:#F2C14E; --bg:#F9F9F9; --text:#333333; }
+    body { margin:0; font-family:'Segoe UI',sans-serif; background:var(--bg); color:var(--text); }
+    header { background:var(--coral); color:white; padding:1rem 2rem; display:flex; align-items:center; justify-content:space-between; }
+    header h1 { margin:0; font-size:1.6rem; }
+    header .tagline { font-size:0.9rem; font-style:italic; }
+    main { display:grid; grid-template-columns:1fr 1fr; gap:2rem; padding:2rem; }
+    .input-section { background:white; padding:1.5rem; border-top:6px solid var(--teal); border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    .input-section h2 { margin-top:0; color:var(--teal); }
+    .input-section label { display:block; margin-top:1rem; font-weight:bold; }
+    .input-section input { width:100%; padding:.5rem; margin-top:.3rem; border:1px solid #ccc; border-radius:4px; }
+    .input-section button { margin-top:1.5rem; padding:.75rem; width:100%; background:var(--gold); color:white; border:none; border-radius:4px; font-size:1rem; cursor:pointer; transition:background .3s; }
+    .input-section button:hover { background:#ddb04f; }
+    .output-section { background:white; padding:1.5rem; border-top:6px solid var(--coral); border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    .output-section h2 { margin-top:0; color:var(--coral); }
+    .output-section p { margin:.5rem 0; font-size:1rem; }
+    canvas { max-width:100%; margin-top:1rem; }
+    footer { grid-column:1/-1; text-align:center; padding:1rem; color:var(--text); font-size:.85rem; }
+    @media(max-width:800px){ main{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>UNEVE - Newton-Cotes 1/7 Simplificado</h1>
+    <span class="tagline">Universidad Estatal del Valle de Ecatepec</span>
+  </header>
+  <main>
+    <div class="input-section">
+      <h2>Datos de Entrada</h2>
+      <label for="func">f(x):</label>
+      <input id="func" type="text" placeholder="Ej. x*x + 1" />
+      <label for="a">a:</label>
+      <input id="a" type="number" placeholder="0" />
+      <label for="b">b:</label>
+      <input id="b" type="number" placeholder="2" />
+      <label for="n">n (subintervalos ≥ 3):</label>
+      <input id="n" type="number" placeholder="3" />
+      <button id="calculate">Calcular</button>
+    </div>
+    <div class="output-section">
+      <h2>Resultado</h2>
+      <div id="result"></div>
+      <canvas id="graph"></canvas>
+    </div>
+    <footer>
+  Chavez Vazquez Pablo Mauricio<br>
+  Garcia Ruiz Brenda Alejandra<br>
+  Chavez Moran Christopher<br>
+  Gonzales Tavera Evelyn Lucero
+</footer>
+  </main>
+  <script>
+    let prevI = null;
+    document.getElementById('calculate').addEventListener('click', () => {
+      const expr = document.getElementById('func').value.trim();
+      const a = parseFloat(document.getElementById('a').value);
+      const b = parseFloat(document.getElementById('b').value);
+      const n = parseInt(document.getElementById('n').value);
+      const res = document.getElementById('result');
+      res.innerHTML = '';
+
+      if (!expr) {
+        res.innerHTML = '<p style="color:red;">Ingrese f(x).</p>';
+        return;
+      }
+      if (isNaN(a) || isNaN(b) || isNaN(n) || b <= a || n < 3) {
+        res.innerHTML = '<p style="color:red;">Valores inválidos o n < 3.</p>';
+        return;
+      }
+
+      let f;
+      try {
+        f = new Function('x', 'return ' + expr + ';');
+        f(a);
+        f(b);
+      } catch (e) {
+        res.innerHTML = '<p style="color:red;">Función inválida.</p>';
+        return;
+      }
+
+      const h = (b - a) / n;
+      let I;
+      if (n >= 6) {
+        I = (7 * h / 1440) * (
+          41 * f(a) +
+          216 * f(a + h) +
+          27 * f(a + 2 * h) +
+          272 * f(a + 3 * h) +
+          27 * f(a + 4 * h) +
+          216 * f(a + 5 * h) +
+          41 * f(a + 6 * h)
+        );
+      } else {
+        I = (3 * h / 8) * (
+          f(a) + 3 * f(a + h) + 3 * f(a + 2 * h) + f(b)
+        );
+      }
+
+      let output = `<p><strong>Integral ≈ ${I.toFixed(6)}</strong></p>`;
+      if (prevI !== null) {
+        const err = Math.abs((I - prevI) / prevI) * 100;
+        output += `<p><strong>Error vs anterior ≈ ${err.toFixed(2)}%</strong></p>`;
+      }
+      prevI = I;
+
+      res.innerHTML = output;
+
+      // Gráfica
+      const xs = [];
+      const ys = [];
+      for (let i = 0; i <= 200; i++) {
+        const x = a + (b - a) * i / 200;
+        xs.push(x);
+        ys.push(f(x));
+      }
+      const ctx = document.getElementById('graph').getContext('2d');
+      if (window.myChart) window.myChart.destroy();
+      window.myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xs,
+          datasets: [{
+            label: 'f(x)',
+            data: ys,
+            borderColor: '#6AAFC0',
+            backgroundColor: 'rgba(106,175,192,0.3)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          scales: {
+            x: { title: { display: true, text: 'x' } },
+            y: { title: { display: true, text: 'f(x)' } }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
